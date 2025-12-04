@@ -169,35 +169,119 @@ git clone https://github.com/wanghui5801/Monitor-nextjs.git
 cd Monitor-nextjs
 ```
 
-2. Setup Frontend:
+2. Setup Backend:
+
+```bash
+cd backend
+python3 -m venv venv
+./venv/bin/python -m pip install -r requirements.txt
+# Start backend server (running on port 5000)
+nohup ./venv/bin/python app.py > backend.log 2>&1 &
+```
+
+3. Setup Frontend:
 
 ```bash
 cd frontend
 npm install
-npm run dev
+# Start frontend server (running on port 3000)
+nohup npm run dev > frontend.log 2>&1 &
 ```
 
-3. Setup Backend:
+4. Verify Services:
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
+# Check if backend is running
+curl http://localhost:5000/api/auth/status
+
+# Check frontend
+curl http://localhost:3000
 ```
+
+**Access Points:**
+- Frontend Dashboard: http://localhost:3000
+- Backend API: http://localhost:5000
+
+
+### Troubleshooting
+
+**Port Already in Use:**
+```bash
+# Check what's using the ports
+lsof -i :5000
+lsof -i :3000
+
+# Kill processes if needed
+kill -9 $(lsof -t -i:5000)
+kill -9 $(lsof -t -i:3000)
+```
+
+**Check Service Status:**
+```bash
+# View backend logs
+tail -f backend/backend.log
+
+# View frontend logs
+tail -f frontend/frontend.log
+
+# Check if services are running
+ps aux | grep "python app.py"
+ps aux | grep "next dev"
+```
+
+**Restart Services:**
+```bash
+# Kill existing processes
+pkill -f "python app.py"
+pkill -f "next dev"
+
+# Restart backend
+cd backend && nohup ./venv/bin/python app.py > backend.log 2>&1 &
+
+# Restart frontend
+cd frontend && nohup npm run dev > frontend.log 2>&1 &
+```
+
+## Quick Start Commands
+
+For quick setup next time, run these commands in order:
+
+```bash
+# 1. Setup and start backend
+cd backend
+python3 -m venv venv
+./venv/bin/python -m pip install -r requirements.txt
+nohup ./venv/bin/python app.py > backend.log 2>&1 &
+
+# 2. Setup and start frontend
+cd ../frontend
+npm install
+nohup npm run dev > frontend.log 2>&1 &
+
+# 3. Wait and verify
+sleep 5
+curl http://localhost:5000/api/auth/status
+curl http://localhost:3000
+```
+
+**Success indicators:**
+- Backend log shows: "Starting server in production mode..."
+- Frontend log shows: "Ready in" message
+- Both curl commands return responses (not connection errors)
+
+Access the application at http://localhost:3000
 
 ## Configuration
 
-### Server
-- API Port: 5000
-- Frontend Port: 3000
-- Database: SQLite3 (/opt/server-monitor/backend/servers.db)
+### Server (Development)
+- API Port: 5000 (defaults to 5000 if available)
+- Frontend Port: 3000 (defaults to 3000 if available)
+- Database: SQLite3 (backend/servers.db)
 
 ### Client
-- Update Interval: 2 seconds
+- Update Interval: 3 seconds
 - Auto-restart: Enabled
-- API Endpoint: http://YOUR_SERVER_IP:5000
+- API Endpoint: http://localhost:5000/api/servers/update (development)
 
 ## Service Management
 
