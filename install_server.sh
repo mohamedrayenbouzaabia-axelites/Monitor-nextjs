@@ -147,7 +147,7 @@ main() {
         print_message "Installation completed successfully!" "$GREEN"
         print_message "You can now access:" "$GREEN"
         print_message "Dashboard: http://${SERVER_IP}:3000" "$GREEN"
-        print_message "API: http://${SERVER_IP}:5000" "$GREEN"
+        print_message "API: http://${SERVER_IP}:8000" "$GREEN"
     else
         print_message "Installation completed but services are not running properly" "$RED"
         print_message "Please check the logs with: pm2 logs" "$YELLOW"

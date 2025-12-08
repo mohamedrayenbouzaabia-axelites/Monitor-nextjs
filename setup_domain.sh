@@ -61,7 +61,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -93,14 +93,14 @@ const getApiUrl = () => {
     return \`https://\${hostname}\`;
   }
   
-  return 'http://localhost:5000';
+  return 'http://localhost:8000';
 };
 
 export const API_URL = getApiUrl();
 EOL
 
 # Update API URL in ecosystem.config.js
-sed -i "s|NEXT_PUBLIC_API_URL: 'http://localhost:5000'|NEXT_PUBLIC_API_URL: 'https://${DOMAIN_NAME}'|" ecosystem.config.js
+sed -i "s|NEXT_PUBLIC_API_URL: 'http://localhost:8000'|NEXT_PUBLIC_API_URL: 'https://${DOMAIN_NAME}'|" ecosystem.config.js
 
 # Rebuild frontend
 cd frontend || exit

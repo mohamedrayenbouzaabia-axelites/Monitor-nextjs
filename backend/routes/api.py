@@ -267,6 +267,38 @@ def reset_password():
         print(f"Error resetting password: {e}")
         return jsonify({'error': str(e)}), 500
 
+@api.route('/auth/demo-override-password', methods=['POST', 'OPTIONS'])
+def demo_override_password():
+    """Demo endpoint to override admin password without old password verification"""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    # Check if development phase is enabled
+    if not Config.DEVELOPMENT_PHASE:
+        return jsonify({'error': 'Demo password override is only available during development phase'}), 403
+
+    try:
+        data = request.get_json()
+        new_password = data.get('newPassword')
+
+        if not new_password:
+            return jsonify({'error': 'New password is required'}), 400
+
+        if len(new_password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters long'}), 400
+
+        # Override password directly without old password verification
+        success = server_model.set_admin_password(new_password)
+
+        if success:
+            return jsonify({'success': True, 'message': 'Password successfully overridden for demo purposes'}), 200
+        else:
+            return jsonify({'error': 'Failed to override password'}), 500
+
+    except Exception as e:
+        print(f"Error overriding password: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @api.route('/servers/<server_id>/heartbeat', methods=['POST'])
 def server_heartbeat(server_id):
     """Lightweight heartbeat endpoint"""

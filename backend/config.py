@@ -26,3 +26,4 @@ class Config:
     DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'servers.db')
     DEBUG = False
     CORS_HEADERS = 'Content-Type'
+    DEVELOPMENT_PHASE = os.getenv('DEVELOPMENT_PHASE', 'false').lower() == 'true'

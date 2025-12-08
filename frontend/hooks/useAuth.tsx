@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { API_URL } from '../config/config';
+import { loginAuth } from '../utils/api';
 
 const AuthContext = createContext<{
   isAuthenticated: boolean;
@@ -24,19 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (password: string) => {
-    const response = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ password }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Invalid password');
-    }
-
-    const { token } = await response.json();
+    const { token } = await loginAuth(password);
     localStorage.setItem('adminToken', token);
     setToken(token);
     setIsAuthenticated(true);

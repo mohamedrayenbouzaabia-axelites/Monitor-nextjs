@@ -6,10 +6,10 @@ const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    return `${protocol}//${hostname}:5000`;
+    return `${protocol}//${hostname}:8000`;
   }
   
-  return 'http://localhost:5000';
+  return 'http://localhost:8000';
 };
 
 export const API_URL = getApiUrl();

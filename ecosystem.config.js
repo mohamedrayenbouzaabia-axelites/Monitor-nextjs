@@ -8,7 +8,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        NEXT_PUBLIC_API_URL: 'http://localhost:5000'
+        NEXT_PUBLIC_API_URL: 'http://localhost:8000'
       },
       instances: 1,
       exec_mode: 'fork',

@@ -66,7 +66,7 @@ main() {
     wget -O monitor.py https://raw.githubusercontent.com/wanghui5801/Monitor-nextjs/main/client/monitor.py
 
     # Configure API URL in monitor.py
-    sed -i "s|API_URL = .*|API_URL = 'http://${SERVER_IP}:5000'|g" monitor.py
+    sed -i "s|API_URL = .*|API_URL = 'http://${SERVER_IP}:8000'|g" monitor.py
     
     # Create systemd service
     cat > /etc/systemd/system/server-monitor-client.service << EOL

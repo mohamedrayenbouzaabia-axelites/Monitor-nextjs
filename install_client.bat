@@ -52,7 +52,7 @@ pip install psutil requests "python-socketio[client]" wmi
 powershell -Command "& { Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/wanghui5801/Monitor-nextjs/main/client/monitor.py' -OutFile 'monitor.py' }"
 
 :: Configure API URL in monitor.py
-powershell -Command "& { (Get-Content monitor.py) -replace 'API_URL = .*', 'API_URL = ''http://%SERVER_IP%:5000''' | Set-Content monitor.py -Encoding UTF8 }"
+powershell -Command "& { (Get-Content monitor.py) -replace 'API_URL = .*', 'API_URL = ''http://%SERVER_IP%:8000''' | Set-Content monitor.py -Encoding UTF8 }"
 
 :: Create logs directory
 mkdir logs 2>nul

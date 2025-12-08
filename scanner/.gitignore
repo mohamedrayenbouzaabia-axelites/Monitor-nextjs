@@ -1,0 +1,14 @@
+.venv
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+*.sqlite3
+*.log
+.DS_Store
+data/
+MCP-Kali-Server/*
+__pycache__/
+*.pyc

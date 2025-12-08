@@ -1,0 +1,10 @@
+fastapi
+httpx
+pydantic
+python-dotenv
+uvicorn
+google-genai
+PyJWT
+bcrypt
+passlib
+python-multipart
