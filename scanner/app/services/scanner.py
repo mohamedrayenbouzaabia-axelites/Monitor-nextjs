@@ -123,17 +123,29 @@ def interpret_risk(
         try:
             ai_risk = _get_gemini_client().generate_risk_assessment(scan_result)
 
-            # return the entire Gemini assessment as-is
-            return (
-                ai_risk.get("risk_level", "unknown"),
-                ai_risk.get("risk_summary"),
-                ai_risk.get("recommendation"),
-            )
+            # Check if Gemini returned a rate limit signal
+            if ai_risk.get("risk_level") is None and ai_risk.get("risk_summary") == "rate_limited":
+                # Rate limited - fall back to deterministic rules
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info("Gemini API rate limit hit, using deterministic fallback rules")
+                pass
+            elif ai_risk.get("risk_level") != "unknown" or ai_risk.get("risk_summary"):
+                # Valid Gemini response - return it as-is
+                return (
+                    ai_risk.get("risk_level", "unknown"),
+                    ai_risk.get("risk_summary", ""),
+                    ai_risk.get("recommendation"),
+                )
 
-        except Exception:  # pylint: disable=broad-except
+        except Exception as exc:  # pylint: disable=broad-except
             # Fall back to deterministic rules if Gemini is unavailable.
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Gemini API error, using deterministic fallback: {exc}")
             pass
 
+    # Deterministic fallback rules
     high_risk = HIGH_RISK_PORTS.intersection(open_ports)
     if high_risk:
         return (

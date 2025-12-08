@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TargetScanResult, ScanProgressResponse } from '../types/availability';
-import { CheckCircleIcon, XCircleIcon, ClockIcon, GlobeAltIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { getPublicTargetsSummary } from '../utils/api';
+import { useSilentRefresh } from '../hooks/useSilentRefresh';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, GlobeAltIcon, LinkIcon } from '@heroicons/react/24/outline';
 
 interface ScanResultsProps {
   scanData: ScanProgressResponse | null;
@@ -8,6 +10,44 @@ interface ScanResultsProps {
 }
 
 const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }) => {
+  const [targets, setTargets] = useState<any>(null);
+  const [targetsLoading, setTargetsLoading] = useState(true);
+  const timestampRef = useRef<HTMLDivElement>(null);
+
+  // Fetch configured targets once
+  useEffect(() => {
+    const fetchTargets = async () => {
+      try {
+        const data = await getPublicTargetsSummary();
+        setTargets(data);
+      } catch (error) {
+        console.error('Error fetching targets:', error);
+      } finally {
+        setTargetsLoading(false);
+      }
+    };
+
+    fetchTargets();
+  }, []);
+
+  // Use silent refresh for timestamp only (no re-renders)
+  useSilentRefresh(
+    async () => {
+      // Silent fetch that doesn't update state
+      return await getPublicTargetsSummary();
+    },
+    {
+      interval: 30000,
+      enabled: !scanData || scanData.status === 'complete' || scanData.status === 'failed',
+      onUpdate: () => {
+        // Only update timestamp silently without re-render
+        if (timestampRef.current) {
+          timestampRef.current.textContent = new Date().toLocaleTimeString();
+        }
+      }
+    }
+  );
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -58,17 +98,403 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
 
   const getCountryFlag = (country: string | null) => {
     if (!country) return null;
-    const countryCode = country.toLowerCase().slice(0, 2);
+
+    // Use emoji flags instead of unreliable image URLs
+    const getCountryEmoji = (countryName: string): string => {
+      const countryMap: { [key: string]: string } = {
+        'United States': '🇺🇸',
+        'Canada': '🇨🇦',
+        'United Kingdom': '🇬🇧',
+        'Germany': '🇩🇪',
+        'France': '🇫🇷',
+        'Italy': '🇮🇹',
+        'Spain': '🇪🇸',
+        'Netherlands': '🇳🇱',
+        'Belgium': '🇧🇪',
+        'Switzerland': '🇨🇭',
+        'Austria': '🇦🇹',
+        'Sweden': '🇸🇪',
+        'Norway': '🇳🇴',
+        'Denmark': '🇩🇰',
+        'Finland': '🇫🇮',
+        'Poland': '🇵🇱',
+        'Czech Republic': '🇨🇿',
+        'Hungary': '🇭🇺',
+        'Romania': '🇷🇴',
+        'Bulgaria': '🇧🇬',
+        'Greece': '🇬🇷',
+        'Turkey': '🇹🇷',
+        'Russia': '🇷🇺',
+        'Ukraine': '🇺🇦',
+        'Belarus': '🇧🇾',
+        'Estonia': '🇪🇪',
+        'Latvia': '🇱🇻',
+        'Lithuania': '🇱🇹',
+        'Ireland': '🇮🇪',
+        'Portugal': '🇵🇹',
+        'Brazil': '🇧🇷',
+        'Argentina': '🇦🇷',
+        'Mexico': '🇲🇽',
+        'Chile': '🇨🇱',
+        'Peru': '🇵🇪',
+        'Colombia': '🇨🇴',
+        'Venezuela': '🇻🇪',
+        'Australia': '🇦🇺',
+        'New Zealand': '🇳🇿',
+        'China': '🇨🇳',
+        'Japan': '🇯🇵',
+        'South Korea': '🇰🇷',
+        'India': '🇮🇳',
+        'Pakistan': '🇵🇰',
+        'Bangladesh': '🇧🇩',
+        'Indonesia': '🇮🇩',
+        'Malaysia': '🇲🇾',
+        'Singapore': '🇸🇬',
+        'Thailand': '🇹🇭',
+        'Vietnam': '🇻🇳',
+        'Philippines': '🇵🇭',
+        'South Africa': '🇿🇦',
+        'Egypt': '🇪🇬',
+        'Israel': '🇮🇱',
+        'Saudi Arabia': '🇸🇦',
+        'United Arab Emirates': '🇦🇪',
+        'Qatar': '🇶🇦',
+        'Kuwait': '🇰🇼',
+        'Bahrain': '🇧🇭',
+        'Oman': '🇴🇲',
+        'Jordan': '🇯🇴',
+        'Lebanon': '🇱🇧',
+        'Iraq': '🇮🇶',
+        'Iran': '🇮🇷',
+        'Afghanistan': '🇦🇫',
+        'Sri Lanka': '🇱🇰',
+        'Myanmar': '🇲🇲',
+        'Cambodia': '🇰🇭',
+        'Laos': '🇱🇦',
+        'Mongolia': '🇲🇳',
+        'Kazakhstan': '🇰🇿',
+        'Uzbekistan': '🇺🇿',
+        'Kyrgyzstan': '🇰🇬',
+        'Tajikistan': '🇹🇯',
+        'Turkmenistan': '🇹🇲',
+        'Georgia': '🇬🇪',
+        'Armenia': '🇦🇲',
+        'Azerbaijan': '🇦🇿',
+        'Cyprus': '🇨🇾',
+        'Malta': '🇲🇹',
+        'Luxembourg': '🇱🇺',
+        'Monaco': '🇲🇨',
+        'Iceland': '🇮🇸',
+        'Greenland': '🇬🇱',
+        'Albania': '🇦🇱',
+        'Macedonia': '🇲🇰',
+        'Montenegro': '🇲🇪',
+        'Serbia': '🇷🇸',
+        'Bosnia': '🇧🇦',
+        'Croatia': '🇭🇷',
+        'Slovenia': '🇸🇮',
+        'Slovakia': '🇸🇰',
+        'Moldova': '🇲🇩',
+        'Andorra': '🇦🇩',
+        'San Marino': '🇸🇲',
+        'Liechtenstein': '🇱🇮',
+        'Vatican': '🇻🇦',
+        'Gibraltar': '🇬🇮',
+        'Guernsey': '🇬🇬',
+        'Jersey': '🇯🇪',
+        'Isle of Man': '🇮🇲',
+        'Bermuda': '🇧🇲',
+        'Cayman Islands': '🇰🇾',
+        'Turks and Caicos': '🇹🇨',
+        'British Virgin Islands': '🇻🇬',
+        'Anguilla': '🇦🇮',
+        'Montserrat': '🇲🇸',
+        'Antigua and Barbuda': '🇦🇬',
+        'Barbados': '🇧🇧',
+        'Trinidad and Tobago': '🇹🇹',
+        'Dominica': '🇩🇲',
+        'St. Lucia': '🇱🇨',
+        'St. Vincent': '🇻🇨',
+        'Grenada': '🇬🇩',
+        'Jamaica': '🇯🇲',
+        'Bahamas': '🇧🇸',
+        'Dominican Republic': '🇩🇴',
+        'Haiti': '🇭🇹',
+        'Puerto Rico': '🇵🇷',
+        'Guatemala': '🇬🇹',
+        'Belize': '🇧🇿',
+        'Honduras': '🇭🇳',
+        'El Salvador': '🇸🇻',
+        'Nicaragua': '🇳🇮',
+        'Costa Rica': '🇨🇷',
+        'Panama': '🇵🇦',
+        'Uruguay': '🇺🇾',
+        'Paraguay': '🇵🇾',
+        'Bolivia': '🇧🇴',
+        'Ecuador': '🇪🇨',
+        'Guyana': '🇬🇾',
+        'Suriname': '🇸🇷',
+        'French Guiana': '🇬🇫',
+        'French Polynesia': '🇵🇫',
+        'New Caledonia': '🇳🇨',
+        'Wallis and Futuna': '🇼🇫',
+        'Samoa': '🇼🇸',
+        'Tonga': '🇹🇴',
+        'Tuvalu': '🇹🇻',
+        'Kiribati': '🇰🇮',
+        'Marshall Islands': '🇲🇭',
+        'Palau': '🇵🇼',
+        'Federated States of Micronesia': '🇫🇲',
+        'Nauru': '🇳🇷',
+        'Papua New Guinea': '🇵🇬',
+        'Solomon Islands': '🇸🇧',
+        'Vanuatu': '🇻🇺',
+        'Fiji': '🇫🇯',
+        'Western Sahara': '🇪🇭',
+        'Sahrawi Arab Democratic Republic': '🇸🇭',
+        'Mayotte': '🇾🇹',
+        'Reunion': '🇷🇪',
+        'Saint Martin': '🇸🇽',
+        'Saint Barthelemy': '🇧🇱',
+        'Saint Pierre and Miquelon': '🇵🇲',
+        'Saint Eustatius': '🇸🇽',
+        'Ascension Island': '🇦🇸',
+        'Tristan da Cunha': '🇹🇹',
+        'Cook Islands': '🇰🇰',
+        'Niue': '🇳🇺',
+        'Tokelau': '🇹🇰',
+        'Pitcairn Islands': '🇵🇳',
+        'South Georgia and the South Sandwich Islands': '🇬🇸',
+        'British Antarctic Territory': '🇬🇶',
+        'British Indian Ocean Territory': '🇮🇴',
+        'Virgin Islands': '🇻🇮',
+        // Add more common countries as needed
+      };
+
+      // Try to find exact match first
+      if (countryMap[countryName]) {
+        return countryMap[countryName];
+      }
+
+      // Try to find by partial match (contains)
+      for (const [name, flag] of Object.entries(countryMap)) {
+        if (name.toLowerCase().includes(countryName.toLowerCase()) ||
+            countryName.toLowerCase().includes(name.toLowerCase())) {
+          return flag;
+        }
+      }
+
+      // Return generic flag for unknown countries
+      return '🏳️';
+    };
+
     return (
-      <img 
-        src={`https://cdn.jsdelivr.net/gh/xykt/ISO3166@main/flags/svg/${countryCode}.svg`}
-        alt={country}
-        className="inline-block w-6 h-4 rounded shadow-sm"
-        onError={(e) => {
-          e.currentTarget.src = 'https://cdn.jsdelivr.net/gh/xykt/ISO3166@main/flags/svg/un.svg';
-        }}
-      />
+      <span className="inline-block text-lg" title={country}>
+        {getCountryEmoji(country)}
+      </span>
     );
+  };
+
+  const getFlagIconClass = (country: string | null): string => {
+    if (!country) return '';
+
+    // Map country names to flag-icons CSS classes
+    const countryToFlag: { [key: string]: string } = {
+      'United States': 'us',
+      'USA': 'us',
+      'US': 'us',
+      'China': 'cn',
+      'Russia': 'ru',
+      'United Kingdom': 'gb',
+      'UK': 'gb',
+      'Great Britain': 'gb',
+      'Germany': 'de',
+      'France': 'fr',
+      'Japan': 'jp',
+      'India': 'in',
+      'Canada': 'ca',
+      'Australia': 'au',
+      'Brazil': 'br',
+      'South Korea': 'kr',
+      'Italy': 'it',
+      'Spain': 'es',
+      'Mexico': 'mx',
+      'Indonesia': 'id',
+      'Netherlands': 'nl',
+      'Saudi Arabia': 'sa',
+      'Switzerland': 'ch',
+      'Taiwan': 'tw',
+      'Belgium': 'be',
+      'Ireland': 'ie',
+      'Israel': 'il',
+      'Austria': 'at',
+      'Norway': 'no',
+      'United Arab Emirates': 'ae',
+      'UAE': 'ae',
+      'Nigeria': 'ng',
+      'Egypt': 'eg',
+      'South Africa': 'za',
+      'Argentina': 'ar',
+      'Thailand': 'th',
+      'Poland': 'pl',
+      'Malaysia': 'my',
+      'Philippines': 'ph',
+      'Ukraine': 'ua',
+      'Bangladesh': 'bd',
+      'Vietnam': 'vn',
+      'Chile': 'cl',
+      'Finland': 'fi',
+      'Singapore': 'sg',
+      'Denmark': 'dk',
+      'Hong Kong': 'hk',
+      'Sweden': 'se',
+      'Czech Republic': 'cz',
+      'Romania': 'ro',
+      'Portugal': 'pt',
+      'New Zealand': 'nz',
+      'Luxembourg': 'lu',
+      'Hungary': 'hu',
+      'Belarus': 'by',
+      'Bulgaria': 'bg',
+      'Croatia': 'hr',
+      'Slovakia': 'sk',
+      'Slovenia': 'si',
+      'Lithuania': 'lt',
+      'Latvia': 'lv',
+      'Estonia': 'ee',
+      'Iceland': 'is',
+      'Malta': 'mt',
+      'Cyprus': 'cy',
+      'Greece': 'gr',
+      'Turkey': 'tr',
+      'Pakistan': 'pk',
+      'Morocco': 'ma',
+      'Peru': 'pe',
+      'Colombia': 'co',
+      'Kazakhstan': 'kz',
+      'Qatar': 'qa',
+      'Kuwait': 'kw',
+      'Costa Rica': 'cr',
+      'Uruguay': 'uy',
+      'Panama': 'pa',
+      'Ecuador': 'ec',
+      'Dominican Republic': 'do',
+      'Guatemala': 'gt',
+      'Cuba': 'cu',
+      'Bolivia': 'bo',
+      'Venezuela': 've',
+      'Sri Lanka': 'lk',
+      'Kenya': 'ke',
+      'Ghana': 'gh',
+      'Ethiopia': 'et',
+      'Tanzania': 'tz',
+      'Uganda': 'ug',
+      'Tunisia': 'tn',
+      'Serbia': 'rs',
+      'Albania': 'al',
+      'Macedonia': 'mk',
+      'North Macedonia': 'mk',
+      'Moldova': 'md',
+      'Bosnia and Herzegovina': 'ba',
+      'Montenegro': 'me',
+      'Andorra': 'ad',
+      'Monaco': 'mc',
+      'San Marino': 'sm',
+      'Liechtenstein': 'li',
+      'Vatican City': 'va',
+      'Holy See': 'va',
+      'Gibraltar': 'gi',
+      'Jordan': 'jo',
+      'Lebanon': 'lb',
+      'Syria': 'sy',
+      'Iraq': 'iq',
+      'Yemen': 'ye',
+      'Bahrain': 'bh',
+      'Oman': 'om',
+      'Afghanistan': 'af',
+      'Libya': 'ly',
+      'Sudan': 'sd',
+      'Algeria': 'dz',
+      'Senegal': 'sn',
+      'Ivory Coast': 'ci',
+      'Côte d\'Ivoire': 'ci',
+      'Burkina Faso': 'bf',
+      'Mali': 'ml',
+      'Niger': 'ne',
+      'Chad': 'td',
+      'Central African Republic': 'cf',
+      'Cameroon': 'cm',
+      'Congo': 'cg',
+      'Democratic Republic of the Congo': 'cd',
+      'DRC': 'cd',
+      'Gabon': 'ga',
+      'Equatorial Guinea': 'gq',
+      'São Tomé and Príncipe': 'st',
+      'Cape Verde': 'cv',
+      'Guinea-Bissau': 'gw',
+      'Guinea': 'gn',
+      'Sierra Leone': 'sl',
+      'Liberia': 'lr',
+      'Togo': 'tg',
+      'Benin': 'bj',
+      'Burundi': 'bi',
+      'Rwanda': 'rw',
+      'South Sudan': 'ss',
+      'Eritrea': 'er',
+      'Djibouti': 'dj',
+      'Somalia': 'so',
+      'Comoros': 'km',
+      'Mauritius': 'mu',
+      'Seychelles': 'sc',
+      'Madagascar': 'mg',
+      'Zimbabwe': 'zw',
+      'Botswana': 'bw',
+      'Namibia': 'na',
+      'Zambia': 'zm',
+      'Malawi': 'mw',
+      'Mozambique': 'mz',
+      'Eswatini': 'sz',
+      'Lesotho': 'ls',
+      'Angola': 'ao',
+      'Bahamas': 'bs',
+      'Barbados': 'bb',
+      'Trinidad and Tobago': 'tt',
+      'Dominica': 'dm',
+      'St. Lucia': 'lc',
+      'St. Vincent and the Grenadines': 'vc',
+      'Grenada': 'gd',
+      'Antigua and Barbuda': 'ag',
+      'St. Kitts and Nevis': 'kn',
+      'Belize': 'bz',
+      'Guyana': 'gy',
+      'Suriname': 'sr',
+      'Jamaica': 'jm',
+      'Haiti': 'ht',
+      'Puerto Rico': 'pr',
+      'U.S. Virgin Islands': 'vi',
+      'British Virgin Islands': 'vg',
+      'Cayman Islands': 'ky',
+      'Turks and Caicos Islands': 'tc',
+      'Bermuda': 'bm',
+      'Aruba': 'aw',
+      'Curaçao': 'cw',
+      'Sint Maarten': 'sx',
+      'Fiji': 'fj',
+      'Papua New Guinea': 'pg',
+      'Solomon Islands': 'sb',
+      'Vanuatu': 'vu',
+      'Samoa': 'ws',
+      'Tonga': 'to',
+      'Kiribati': 'ki',
+      'Marshall Islands': 'mh',
+      'Palau': 'pw',
+      'Nauru': 'nr',
+      'Tuvalu': 'tv',
+      'Micronesia': 'fm'
+    };
+
+    const flagClass = countryToFlag[country];
+    return flagClass ? `fi fi-${flagClass}` : '';
   };
 
   if (isLoading) {
@@ -152,20 +578,23 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
           )}
           <div>
             <span className="text-gray-500 dark:text-gray-400">Last Updated:</span>
-            <div className="font-medium text-gray-900 dark:text-white">
+            <div ref={timestampRef} className="font-medium text-gray-900 dark:text-white">
               {new Date().toLocaleTimeString()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Results Table */}
-      {scanData.results.length > 0 && (
+      {/* Show scan results if available */}
+      {scanData && scanData.results && scanData.results.length > 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
               Target Results ({scanData.results.length})
             </h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Latest scan results - {scanData.completed_targets}/{scanData.total_targets} targets scanned
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -189,13 +618,23 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Risk Level
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Services
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {scanData.results.map((result, index) => (
+                {scanData.results.map((result: any, index: number) => (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
+                        <div className="flex-shrink-0 mr-3">
+                          {result.target.includes('.') ? (
+                            <GlobeAltIcon className="h-5 w-5 text-blue-500" />
+                          ) : (
+                            <LinkIcon className="h-5 w-5 text-purple-500" />
+                          )}
+                        </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {result.target}
@@ -211,15 +650,12 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {getCountryFlag(result.country)}
-                        <div>
-                          <div className="text-sm text-gray-900 dark:text-white">
-                            {result.location || 'Unknown'}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {result.country || 'Unknown'}
-                          </div>
-                        </div>
+                        {getFlagIconClass(result.country) && (
+                          <span className={getFlagIconClass(result.country)}></span>
+                        )}
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {result.country || 'Unknown'}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -228,7 +664,7 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
                         {result.open_ports.length > 0 ? (
-                          result.open_ports.slice(0, 3).map(port => (
+                          result.open_ports.slice(0, 3).map((port: number) => (
                             <span key={port} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
                               {port}
                             </span>
@@ -253,10 +689,151 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                         {result.risk_level.charAt(0).toUpperCase() + result.risk_level.slice(1)}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {result.accessibility_tests && result.accessibility_tests
+                          .filter((test: any) => test.status === 'open')
+                          .slice(0, 2)
+                          .map((test: any) => (
+                            <span key={test.port} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                              {test.service}
+                            </span>
+                          ))}
+                        {result.accessibility_tests &&
+                         result.accessibility_tests.filter((t: any) => t.status === 'open').length > 2 && (
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            +{result.accessibility_tests.filter((t: any) => t.status === 'open').length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+          {scanData.results.some((r: any) => r.risk_summary) && (
+            <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+              <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Security Summary</h5>
+              <div className="space-y-2">
+                {scanData.results.filter((r: any) => r.risk_summary).map((result: any, index: number) => (
+                  <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                        result.risk_level === 'high' ? 'bg-red-500' :
+                        result.risk_level === 'medium' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {result.target}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
+                          {result.risk_summary}
+                        </div>
+                        {result.recommendation && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            <strong>Recommendation:</strong> {result.recommendation}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Show configured targets when no scan results */
+        targets && targets.targets && targets.targets.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Target Results ({targets.targets.length})
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Configured monitoring targets - Ready to scan
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Target
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {targets.targets.map((target: any, index: number) => (
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 mr-3">
+                            {target.type === 'ip' ? (
+                              <GlobeAltIcon className="h-5 w-5 text-blue-500" />
+                            ) : (
+                              <LinkIcon className="h-5 w-5 text-purple-500" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {target.value}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                              {target.type}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          target.type === 'ip'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                        }`}>
+                          {target.type === 'ip' ? 'IP Address' : 'Endpoint'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {target.description || 'No description'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
+                          <ClockIcon className="h-3 w-3 mr-1" />
+                          Pending Scan
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Show empty state if no targets */}
+      {(!targets || !targets.targets || targets.targets.length === 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <GlobeAltIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              No targets configured
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Add IP addresses or endpoints to start monitoring their availability.
+            </p>
           </div>
         </div>
       )}

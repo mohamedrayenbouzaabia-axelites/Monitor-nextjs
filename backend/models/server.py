@@ -85,6 +85,18 @@ class Server:
                     is_initialized BOOLEAN DEFAULT FALSE
                 )
             ''')
+
+            # Create teams table
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS teams (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
             conn.commit()
             print("Database initialized successfully")
         except Exception as e:
@@ -480,6 +492,96 @@ class Server:
         """Enhanced status change logging"""
         current_time = datetime.now().isoformat()
         log_message = f"{current_time} - Server '{server_name}' status changed: {old_status} -> {new_status}"
-        
+
         # Write to log file
         logging.info(log_message)
+
+    def create_team(self, name: str, description: str) -> bool:
+        """Create a new team"""
+        conn = self.get_db()
+        c = conn.cursor()
+        try:
+            c.execute('''
+                INSERT INTO teams (name, description)
+                VALUES (?, ?)
+            ''', (name, description))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            # Team with this name already exists
+            return False
+        except Exception as e:
+            print(f"Error creating team: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def get_team_by_name(self, name: str) -> dict:
+        """Get team information by name"""
+        conn = self.get_db()
+        c = conn.cursor()
+        try:
+            c.execute('''
+                SELECT id, name, description, created_at, updated_at
+                FROM teams
+                WHERE name = ?
+            ''', (name,))
+            result = c.fetchone()
+            if result:
+                columns = ['id', 'name', 'description', 'created_at', 'updated_at']
+                return dict(zip(columns, result))
+            return None
+        finally:
+            conn.close()
+
+    def get_all_teams(self) -> List[dict]:
+        """Get all teams"""
+        conn = self.get_db()
+        c = conn.cursor()
+        try:
+            c.execute('''
+                SELECT id, name, description, created_at, updated_at
+                FROM teams
+                ORDER BY created_at DESC
+            ''')
+            columns = ['id', 'name', 'description', 'created_at', 'updated_at']
+            teams = []
+            for row in c.fetchall():
+                team = dict(zip(columns, row))
+                teams.append(team)
+            return teams
+        finally:
+            conn.close()
+
+    def update_team(self, name: str, description: str) -> bool:
+        """Update team description"""
+        conn = self.get_db()
+        c = conn.cursor()
+        try:
+            c.execute('''
+                UPDATE teams
+                SET description = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE name = ?
+            ''', (description, name))
+            conn.commit()
+            return c.rowcount > 0
+        except Exception as e:
+            print(f"Error updating team: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def delete_team(self, name: str) -> bool:
+        """Delete a team by name"""
+        conn = self.get_db()
+        c = conn.cursor()
+        try:
+            c.execute('DELETE FROM teams WHERE name = ?', (name,))
+            conn.commit()
+            return c.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting team: {e}")
+            return False
+        finally:
+            conn.close()

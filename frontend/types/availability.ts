@@ -24,7 +24,7 @@ export interface ScanProgressResponse {
     token: string;
     total_targets: number;
     completed_targets: number;
-    status: 'running' | 'completed' | 'failed';
+    status: 'queued' | 'running' | 'complete' | 'failed';
     mode: 'standard' | 'ai';
     started_at: string;
     finished_at: string | null;

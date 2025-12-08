@@ -8,3 +8,6 @@ PyJWT
 bcrypt
 passlib
 python-multipart
+python-nmap
+aiofiles
+psutil

@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any, Dict, Optional
 
+import httpx
 from google import genai
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiClient:
@@ -18,11 +22,13 @@ class GeminiClient:
         if self.api_key:
             self.client = genai.Client(api_key=self.api_key)
 
-    def _call_api(self, prompt: str) -> str:
+    def _call_api(self, prompt: str) -> tuple[str, bool]:
+        """Call Gemini API and return (response_text, is_rate_limited)."""
         if not self.client:
             return (
                 "Gemini API key not configured. Set the GEMINI_API_KEY environment variable "
-                "to enable AI-driven audit responses."
+                "to enable AI-driven audit responses.",
+                False
             )
 
         try:
@@ -34,29 +40,44 @@ class GeminiClient:
                 },
             )
         except Exception as exc:  # pylint: disable=broad-except
-            return f"Gemini API call failed: {exc}"
+            # Check if it's a rate limit error
+            error_str = str(exc).lower()
+            if "resource_exhausted" in error_str or "429" in error_str or "rate_limit" in error_str:
+                logger.warning(f"Gemini API rate limit exceeded: {exc}")
+                return f"Gemini API rate limit exceeded: {exc}", True
+            logger.error(f"Gemini API call failed: {exc}")
+            return f"Gemini API call failed: {exc}", False
 
         if getattr(response, "text", None):
-            return response.text
+            return response.text, False
 
         candidates: List[Any] = getattr(response, "candidates", []) or []
         if not candidates:
-            return "Gemini API returned no candidates in the response."
+            return "Gemini API returned no candidates in the response.", False
 
         first_candidate = candidates[0]
         content = getattr(first_candidate, "content", None)
         parts = getattr(content, "parts", []) if content else []
         if not parts:
-            return "Gemini response did not contain any text parts."
+            return "Gemini response did not contain any text parts.", False
         # Each part has a .text attribute per google-genai.
         part_texts = [getattr(part, "text", "") for part in parts]
         combined = " ".join(t for t in part_texts if t).strip()
-        return combined or "Gemini response missing textual content."
+        return combined or "Gemini response missing textual content.", False
 
     def generate_risk_assessment(self, scan_result: Dict[str, Any]) -> Dict[str, Optional[str]]:
         """Generate a concise risk assessment from a full scan result."""
         prompt = self._build_risk_prompt(scan_result)
-        raw_response = self._call_api(prompt)
+        raw_response, is_rate_limited = self._call_api(prompt)
+
+        # If rate limited, return a special response indicating fallback should be used
+        if is_rate_limited:
+            return {
+                "risk_level": None,  # Indicates fallback should be used
+                "risk_summary": "rate_limited",
+                "recommendation": None,
+            }
+
         try:
             parsed = json.loads(raw_response)
         except json.JSONDecodeError:

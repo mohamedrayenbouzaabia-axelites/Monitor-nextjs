@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import router as scan_router
+from .api.security_scan import router as security_scan_router
 
 logger = logging.getLogger("app.main")
 logging.basicConfig(level=logging.INFO)
@@ -38,13 +39,15 @@ _log_api_config_readiness()
 
 
 app = FastAPI(
-    title="IP Intelligence Scanner",
+    title="Advanced Security Scanner",
     description=(
-        "Submit one or more IP addresses or endpoints to collect metadata, "
-        "accessibility information, and a lightweight risk assessment. "
-        "Use the returned token to poll scan progress."
+        "Comprehensive security scanning platform with Nmap and Nikto integration. "
+        "Perform legitimate security assessments on authorized targets only. "
+        "All scans are logged and require proper authentication."
     ),
-    version="0.1.0",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Add CORS middleware
@@ -57,3 +60,4 @@ app.add_middleware(
 )
 
 app.include_router(scan_router)
+app.include_router(security_scan_router)

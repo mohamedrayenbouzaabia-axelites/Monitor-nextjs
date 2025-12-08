@@ -234,6 +234,52 @@ export const getEndpoints = async (): Promise<Endpoint[]> => {
   }
 };
 
+// Public API functions for guest interface
+export const getPublicTargets = async () => {
+  try {
+    const response = await fetch(`${API_URL}/public/targets`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch public targets: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching public targets:', error);
+    return { ip_addresses: [], endpoints: [] };
+  }
+};
+
+export const getPublicTargetsSummary = async () => {
+  try {
+    const response = await fetch(`${API_URL}/public/targets/summary`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch targets summary: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching targets summary:', error);
+    return {
+      total_targets: 0,
+      ip_addresses: 0,
+      endpoints: 0,
+      targets: []
+    };
+  }
+};
+
 // Helper functions for local storage management
 const getIPAddressesFromStorage = (): IPAddress[] => {
   try {

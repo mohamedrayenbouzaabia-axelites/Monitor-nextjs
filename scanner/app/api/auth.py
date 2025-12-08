@@ -51,6 +51,10 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
     token = credentials.credentials
     return auth_db.verify_token(token, AuthConfig.SECRET_KEY)
 
+def verify_jwt_token(token: str) -> dict:
+    """Verify JWT token and return payload"""
+    return auth_db.verify_token(token, AuthConfig.SECRET_KEY, return_payload=True)
+
 @router.get("/auth/status", response_model=StatusResponse)
 async def get_auth_status():
     """Check if authentication system is initialized"""

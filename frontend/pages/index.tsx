@@ -1,15 +1,13 @@
 import Layout from '../components/Layout'
 import ScanResults from '../components/ScanResults'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { ScanProgressResponse } from '../types/availability'
 import { getScanStatus } from '../utils/api'
+import { useTargetedPolling } from '../hooks/useTargetedPolling'
 import Link from 'next/link'
-import { 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  ClockIcon,
-  GlobeAltIcon,
-  ServerIcon,
+import {
+  CheckCircleIcon,
+  XCircleIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline'
 
@@ -17,147 +15,135 @@ export default function Home() {
   const [recentScan, setRecentScan] = useState<ScanProgressResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lastScanRef = useRef<ScanProgressResponse | null>(null)
 
-  // For demo purposes, we'll simulate recent scan data
-  // In a real implementation, this would fetch the latest completed scan
+  // Fetch scan data using targeted polling
+  const fetchRecentScan = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // First check for active scan
+      const activeScanToken = localStorage.getItem('activeScanToken')
+      if (activeScanToken) {
+        try {
+          const scanData = await getScanStatus(activeScanToken)
+
+          // Only update state if data actually changed (prevents unnecessary re-renders)
+          if (!lastScanRef.current ||
+              JSON.stringify(lastScanRef.current) !== JSON.stringify(scanData)) {
+            setRecentScan(scanData)
+            lastScanRef.current = scanData
+          }
+
+          // If scan is complete or failed, also clear the active scan token
+          if (scanData.status === 'complete' || scanData.status === 'failed') {
+            localStorage.removeItem('activeScanToken')
+            if (scanData.status === 'complete') {
+              localStorage.setItem('lastScanToken', activeScanToken)
+            }
+            // Stop polling when scan completes
+            stopPolling()
+          }
+
+          return
+        } catch (error) {
+          console.log('Active scan not available')
+          localStorage.removeItem('activeScanToken')
+        }
+      }
+
+      // Then check for last completed scan
+      const lastScanToken = localStorage.getItem('lastScanToken')
+      if (lastScanToken) {
+        try {
+          const scanData = await getScanStatus(lastScanToken)
+          if (scanData.status === 'complete') {
+            setRecentScan(scanData)
+            lastScanRef.current = scanData
+            return
+          }
+        } catch (error) {
+          console.log('Last scan not available or expired')
+        }
+      }
+
+      // No scan data available
+      setRecentScan(null)
+    } catch (error) {
+      console.error('Error fetching scan data:', error)
+      setError('Failed to load scan data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Use targeted polling only for scan status updates
+  const { start: startPolling, stop: stopPolling } = useTargetedPolling(fetchRecentScan, {
+    interval: 3000, // Poll every 3 seconds for better responsiveness
+    enabled: false, // Start disabled, will enable when needed
+    onStop: () => {
+      console.log('Scan polling stopped')
+    }
+  })
+
+  // Initial data fetch and start polling if there's an active scan
   useEffect(() => {
-    const fetchRecentScan = async () => {
+    const initializePolling = async () => {
+      // Check for active scan before initial fetch
+      const activeScanToken = localStorage.getItem('activeScanToken')
+
+      // Perform initial fetch
       try {
         setLoading(true)
         setError(null)
-        
-        // Simulate API call - in real implementation, fetch latest scan from localStorage or API
+
+        if (activeScanToken) {
+          try {
+            const scanData = await getScanStatus(activeScanToken)
+            setRecentScan(scanData)
+
+            // Start polling only for active scans
+            if (scanData.status === 'queued' || scanData.status === 'running') {
+              startPolling()
+            } else if (scanData.status === 'complete' || scanData.status === 'failed') {
+              localStorage.removeItem('activeScanToken')
+              if (scanData.status === 'complete') {
+                localStorage.setItem('lastScanToken', activeScanToken)
+              }
+            }
+            return
+          } catch (error) {
+            console.log('Active scan not available')
+            localStorage.removeItem('activeScanToken')
+          }
+        }
+
+        // Check for last completed scan if no active scan
         const lastScanToken = localStorage.getItem('lastScanToken')
         if (lastScanToken) {
           try {
             const scanData = await getScanStatus(lastScanToken)
-            setRecentScan(scanData)
+            if (scanData.status === 'complete') {
+              setRecentScan(scanData)
+              return
+            }
           } catch (error) {
-            console.log('No recent scan found or scan not available')
-            // Create sample data for demonstration
-            setRecentScan({
-              token: 'demo-token',
-              total_targets: 15,
-              completed_targets: 15,
-              status: 'completed',
-              mode: 'standard',
-              started_at: new Date(Date.now() - 3600000).toISOString(),
-              finished_at: new Date().toISOString(),
-              results: [
-                {
-                  target: '8.8.8.8',
-                  ip_address: '8.8.8.8',
-                  availability: true,
-                  location: 'Mountain View, California',
-                  country: 'United States',
-                  provider: 'Google LLC',
-                  service_category: 'DNS',
-                  publicly_exposed: true,
-                  open_ports: [53],
-                  accessibility_tests: [
-                    { port: 53, service: 'DNS', status: 'open' }
-                  ],
-                  risk_level: 'low',
-                  risk_summary: 'Standard public DNS service',
-                  recommendation: 'Normal DNS service configuration'
-                },
-                {
-                  target: '1.1.1.1',
-                  ip_address: '1.1.1.1',
-                  availability: true,
-                  location: 'San Francisco, California',
-                  country: 'United States',
-                  provider: 'Cloudflare, Inc.',
-                  service_category: 'DNS',
-                  publicly_exposed: true,
-                  open_ports: [53],
-                  accessibility_tests: [
-                    { port: 53, service: 'DNS', status: 'open' }
-                  ],
-                  risk_level: 'low',
-                  risk_summary: 'Standard public DNS service',
-                  recommendation: 'Normal DNS service configuration'
-                }
-              ]
-            })
+            console.log('Last scan not available or expired')
           }
-        } else {
-          // Create sample data for first-time users
-          setRecentScan({
-            token: 'demo-token',
-            total_targets: 10,
-            completed_targets: 8,
-            status: 'running',
-            mode: 'standard',
-            started_at: new Date(Date.now() - 1800000).toISOString(),
-            finished_at: null,
-            results: [
-              {
-                target: '8.8.8.8',
-                ip_address: '8.8.8.8',
-                availability: true,
-                location: 'Mountain View, California',
-                country: 'United States',
-                provider: 'Google LLC',
-                service_category: 'DNS',
-                publicly_exposed: true,
-                open_ports: [53],
-                accessibility_tests: [
-                  { port: 53, service: 'DNS', status: 'open' }
-                ],
-                risk_level: 'low',
-                risk_summary: 'Standard public DNS service',
-                recommendation: 'Normal DNS service configuration'
-              },
-              {
-                target: '1.1.1.1',
-                ip_address: '1.1.1.1',
-                availability: true,
-                location: 'San Francisco, California',
-                country: 'United States',
-                provider: 'Cloudflare, Inc.',
-                service_category: 'DNS',
-                publicly_exposed: true,
-                open_ports: [53],
-                accessibility_tests: [
-                  { port: 53, service: 'DNS', status: 'open' }
-                ],
-                risk_level: 'low',
-                risk_summary: 'Standard public DNS service',
-                recommendation: 'Normal DNS service configuration'
-              },
-              {
-                target: '192.168.1.1',
-                ip_address: '192.168.1.1',
-                availability: false,
-                location: null,
-                country: null,
-                provider: null,
-                service_category: null,
-                publicly_exposed: false,
-                open_ports: [],
-                accessibility_tests: [],
-                risk_level: 'unknown',
-                risk_summary: 'Host not reachable',
-                recommendation: null
-              }
-            ]
-          })
         }
+
+        setRecentScan(null)
       } catch (error) {
-        console.error('Error fetching recent scan:', error)
-        setError('Failed to load recent scan data')
+        console.error('Error initializing scan data:', error)
+        setError('Failed to load scan data')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchRecentScan()
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchRecentScan, 30000)
-    return () => clearInterval(interval)
-  }, [])
+    initializePolling()
+  }, [startPolling])
 
   const getStats = () => {
     if (!recentScan) return { total: 0, available: 0, unavailable: 0, successRate: 0 }
@@ -256,6 +242,7 @@ export default function Home() {
             </div>
           )}
 
+          {/* Scan Results Section - Shows Configured Targets */}
           <ScanResults scanData={recentScan} isLoading={loading} />
         </div>
       )}

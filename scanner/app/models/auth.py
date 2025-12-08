@@ -122,17 +122,17 @@ class AuthDatabase:
         finally:
             conn.close()
 
-    def verify_token(self, token: str, secret_key: str) -> bool:
+    def verify_token(self, token: str, secret_key: str, return_payload: bool = False) -> bool:
         """Verify JWT token"""
         try:
-            jwt.decode(token, secret_key, algorithms=["HS256"])
-            return True
+            payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+            return payload if return_payload else True
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")
-            return False
+            return False if not return_payload else None
         except jwt.InvalidTokenError:
             logger.warning("Invalid token")
-            return False
+            return False if not return_payload else None
 
     def generate_token(self, secret_key: str, expires_in_days: int = 1) -> str:
         """Generate JWT token"""

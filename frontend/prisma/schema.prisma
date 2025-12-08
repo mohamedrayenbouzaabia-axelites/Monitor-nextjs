@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User management with role-based access control
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  role              UserRole  @default(GUEST)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  targets           Target[]
+  scanSessions      ScanSession[]
+  auditLogs         AuditLog[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+// User roles for RBAC
+enum UserRole {
+  ADMIN
+  OPERATOR
+  VIEWER
+  GUEST
+}
+
+// User sessions for authentication
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Monitoring targets (IP addresses and endpoints)
+model Target {
+  id          String      @id @default(cuid())
+  type        TargetType
+  value       String
+  description String?
+  isActive    Boolean     @default(true)
+  createdById String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  scans       ScanResult[]
+  scanSessions ScanSession[]
+
+  @@unique([type, value, createdById])
+  @@map("targets")
+}
+
+// Target type enumeration
+enum TargetType {
+  IP
+  ENDPOINT
+}
+
+// Scan sessions for tracking group scans
+model ScanSession {
+  id             String        @id @default(cuid())
+  token          String        @unique
+  userId         String
+  mode           ScanMode      @default(STANDARD)
+  status         ScanStatus    @default(QUEUED)
+  totalTargets   Int           @default(0)
+  completedTargets Int         @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  errorMessage   String?
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  targets        Target[]
+  results        ScanResult[]
+  auditLogs      AuditLog[]
+
+  @@map("scan_sessions")
+}
+
+// Scan modes
+enum ScanMode {
+  STANDARD
+  AI
+}
+
+// Scan status enumeration
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+// Individual scan results
+model ScanResult {
+  id           String    @id @default(cuid())
+  targetId     String
+  sessionId    String?
+  target       String
+  ipAddress    String?
+  status       String    // "online" | "offline" | "error"
+  responseTime Int?      // Response time in milliseconds
+  location     Json?     // Geolocation data
+  provider     String?   // ISP/Cloud provider
+  openPorts    Int[]     @default([])
+  riskLevel    String    @default("unknown") // "no risk" | "low" | "medium" | "high"
+  riskSummary  String?
+  recommendation String?
+  accessibilityTests Json? // Detailed port scan results
+  geminiAnalysis   Json?  // AI analysis data
+  scannedAt    DateTime  @default(now())
+
+  // Relations
+  targetRel    Target    @relation(fields: [targetId], references: [id])
+  sessionRel   ScanSession? @relation(fields: [sessionId], references: [id])
+
+  @@map("scan_results")
+}
+
+// Audit logs for tracking all user actions
+model AuditLog {
+  id        String     @id @default(cuid())
+  userId    String
+  sessionId String?
+  action    String
+  resource  String?
+  resourceId String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime   @default(now())
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id])
+  session   ScanSession? @relation(fields: [sessionId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// System configuration and settings
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// API keys for external integrations
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  permissions String[]  @default([])
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("api_keys")
+}
+
+// Notification preferences and logs
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SCAN_COMPLETE
+  SCAN_FAILED
+  TARGET_DOWN
+  SECURITY_ALERT
+  SYSTEM_UPDATE
+}

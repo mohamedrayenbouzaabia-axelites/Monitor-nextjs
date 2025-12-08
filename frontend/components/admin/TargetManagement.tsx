@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { IPAddress, Endpoint } from '../../types/availability';
 import { getIPAddresses, getEndpoints, addIPAddress, addEndpoint, deleteIPAddress, deleteEndpoint } from '../../utils/api';
+import { syncTargetsWithBackend, deleteTargetFromBackend } from '../../utils/targetSync';
 import { PlusIcon, TrashIcon, GlobeAltIcon, ServerIcon } from '@heroicons/react/24/outline';
 
 interface TargetManagementProps {
@@ -14,9 +15,15 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
   const [error, setError] = useState<string | null>(null);
   const [isAddingIP, setIsAddingIP] = useState(false);
   const [isAddingEndpoint, setIsAddingEndpoint] = useState(false);
+  const [isBulkAddingIPs, setIsBulkAddingIPs] = useState(false);
+  const [isBulkAddingEndpoints, setIsBulkAddingEndpoints] = useState(false);
   const [newIP, setNewIP] = useState('');
   const [newEndpoint, setNewEndpoint] = useState('');
   const [newDescription, setNewDescription] = useState('');
+
+  // Bulk addition states
+  const [bulkIPs, setBulkIPs] = useState<string>('');
+  const [bulkEndpoints, setBulkEndpoints] = useState<string>('');
 
   const fetchTargets = async () => {
     try {
@@ -47,11 +54,16 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
 
     try {
       setError(null);
-      await addIPAddress(newIP.trim(), newDescription.trim() || undefined);
+      const newIPData = await addIPAddress(newIP.trim(), newDescription.trim() || undefined);
       setNewIP('');
       setNewDescription('');
       setIsAddingIP(false);
       await fetchTargets();
+
+      // Sync with backend for public visibility
+      const updatedIPs = await getIPAddresses();
+      const updatedEndpoints = await getEndpoints();
+      await syncTargetsWithBackend(updatedIPs, updatedEndpoints);
     } catch (error) {
       console.error('Error adding IP address:', error);
       setError('Failed to add IP address');
@@ -68,9 +80,70 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
       setNewDescription('');
       setIsAddingEndpoint(false);
       await fetchTargets();
+
+      // Sync with backend for public visibility
+      const updatedIPs = await getIPAddresses();
+      const updatedEndpoints = await getEndpoints();
+      await syncTargetsWithBackend(updatedIPs, updatedEndpoints);
     } catch (error) {
       console.error('Error adding endpoint:', error);
       setError('Failed to add endpoint');
+    }
+  };
+
+  const handleBulkAddIPs = async () => {
+    if (!bulkIPs.trim()) return;
+
+    try {
+      setError(null);
+      const ipLines = bulkIPs.trim().split('\n').filter(line => line.trim());
+      const promises = ipLines.map(async (line) => {
+        const parts = line.trim().split(',');
+        const ip = parts[0].trim();
+        const description = parts.slice(1).join(',').trim() || undefined;
+        return addIPAddress(ip, description);
+      });
+
+      await Promise.all(promises);
+      setBulkIPs('');
+      setIsBulkAddingIPs(false);
+      await fetchTargets();
+
+      // Sync with backend for public visibility
+      const updatedIPs = await getIPAddresses();
+      const updatedEndpoints = await getEndpoints();
+      await syncTargetsWithBackend(updatedIPs, updatedEndpoints);
+    } catch (error) {
+      console.error('Error adding bulk IPs:', error);
+      setError('Failed to add bulk IP addresses');
+    }
+  };
+
+  const handleBulkAddEndpoints = async () => {
+    if (!bulkEndpoints.trim()) return;
+
+    try {
+      setError(null);
+      const endpointLines = bulkEndpoints.trim().split('\n').filter(line => line.trim());
+      const promises = endpointLines.map(async (line) => {
+        const parts = line.trim().split(',');
+        const endpoint = parts[0].trim();
+        const description = parts.slice(1).join(',').trim() || undefined;
+        return addEndpoint(endpoint, description);
+      });
+
+      await Promise.all(promises);
+      setBulkEndpoints('');
+      setIsBulkAddingEndpoints(false);
+      await fetchTargets();
+
+      // Sync with backend for public visibility
+      const updatedIPs = await getIPAddresses();
+      const updatedEndpoints = await getEndpoints();
+      await syncTargetsWithBackend(updatedIPs, updatedEndpoints);
+    } catch (error) {
+      console.error('Error adding bulk endpoints:', error);
+      setError('Failed to add bulk endpoints');
     }
   };
 
@@ -78,6 +151,7 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
     try {
       setError(null);
       await deleteIPAddress(id);
+      await deleteTargetFromBackend('ip', id);
       await fetchTargets();
     } catch (error) {
       console.error('Error deleting IP address:', error);
@@ -89,6 +163,7 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
     try {
       setError(null);
       await deleteEndpoint(id);
+      await deleteTargetFromBackend('endpoint', id);
       await fetchTargets();
     } catch (error) {
       console.error('Error deleting endpoint:', error);
@@ -121,13 +196,22 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
               IP Addresses ({ipAddresses.length})
             </h3>
           </div>
-          <button
-            onClick={() => setIsAddingIP(true)}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
-            Add IP
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setIsAddingIP(true)}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 transition-colors"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add IP
+            </button>
+            <button
+              onClick={() => setIsBulkAddingIPs(true)}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:hover:bg-purple-800 transition-colors"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Bulk Add
+            </button>
+          </div>
         </div>
 
         {isAddingIP && (
@@ -180,6 +264,46 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
           </div>
         )}
 
+        {isBulkAddingIPs && (
+          <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Bulk IP Addresses (one per line)
+                </label>
+                <textarea
+                  value={bulkIPs}
+                  onChange={(e) => setBulkIPs(e.target.value)}
+                  placeholder="192.168.1.1, Main server&#10;8.8.8.8, Google DNS&#10;10.0.0.1, Internal router"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-600 dark:text-white"
+                  rows={5}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Format: IP address, optional description (one per line)
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleBulkAddIPs}
+                  disabled={!bulkIPs.trim()}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add Bulk IPs
+                </button>
+                <button
+                  onClick={() => {
+                    setIsBulkAddingIPs(false);
+                    setBulkIPs('');
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2">
           {ipAddresses.map((ip) => (
             <div key={ip.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -214,13 +338,22 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
               Endpoints ({endpoints.length})
             </h3>
           </div>
-          <button
-            onClick={() => setIsAddingEndpoint(true)}
-            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
-            Add Endpoint
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setIsAddingEndpoint(true)}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add Endpoint
+            </button>
+            <button
+              onClick={() => setIsBulkAddingEndpoints(true)}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:hover:bg-purple-800 transition-colors"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Bulk Add
+            </button>
+          </div>
         </div>
 
         {isAddingEndpoint && (
@@ -263,6 +396,46 @@ const TargetManagement: React.FC<TargetManagementProps> = ({ onScanInitiated }) 
                     setIsAddingEndpoint(false);
                     setNewEndpoint('');
                     setNewDescription('');
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+      )}
+
+        {isBulkAddingEndpoints && (
+          <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Bulk Endpoints (one per line)
+                </label>
+                <textarea
+                  value={bulkEndpoints}
+                  onChange={(e) => setBulkEndpoints(e.target.value)}
+                  placeholder="example.com, Main website&#10;api.example.com, API server&#10;ec2-54-176-98-121.us-west-1.compute.amazonaws.com, AWS instance"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-600 dark:text-white"
+                  rows={5}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Format: endpoint URL, optional description (one per line)
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleBulkAddEndpoints}
+                  disabled={!bulkEndpoints.trim()}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add Bulk Endpoints
+                </button>
+                <button
+                  onClick={() => {
+                    setIsBulkAddingEndpoints(false);
+                    setBulkEndpoints('');
                   }}
                   className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
                 >

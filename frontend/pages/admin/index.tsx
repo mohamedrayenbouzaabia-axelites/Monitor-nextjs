@@ -5,11 +5,12 @@ import ScanInitiator from '../../components/admin/ScanInitiator';
 import ScanResults from '../../components/ScanResults';
 import DemoPasswordOverride from '../../components/admin/DemoPasswordOverride';
 import { useAuth } from '../../hooks/useAuth';
+import { useTargetedPolling } from '../../hooks/useTargetedPolling';
 import { getIPAddresses, getEndpoints, getScanStatus } from '../../utils/api';
 import { IPAddress, Endpoint, ScanProgressResponse } from '../../types/availability';
-import { 
-  PlayIcon, 
-  ServerIcon, 
+import {
+  PlayIcon,
+  ServerIcon,
   GlobeAltIcon,
   ArrowPathIcon,
   KeyIcon
@@ -55,10 +56,11 @@ export default function AdminDashboard() {
       setScanData(statusData);
       
       // Stop polling when scan is completed or failed
-      if (statusData.status === 'completed' || statusData.status === 'failed') {
+      if (statusData.status === 'complete' || statusData.status === 'failed') {
         stopPolling();
-        
-        if (statusData.status === 'completed') {
+        setActiveScanToken(null); // Clear the active scan token
+
+        if (statusData.status === 'complete') {
           toast.success('Scan completed successfully!');
           // Store the completed scan token for the home page
           localStorage.setItem('lastScanToken', token);
@@ -74,38 +76,83 @@ export default function AdminDashboard() {
     }
   };
 
+  // Use targeted polling for scan status updates
+  const { start: startPollingScan, stop: stopPollingScan } = useTargetedPolling(
+    async () => {
+      if (!activeScanToken) return;
+      await pollScanStatus(activeScanToken);
+    },
+    {
+      interval: 5000, // Reduced frequency to prevent visual glitches
+      enabled: false,
+      onStop: () => {
+        setIsPolling(false);
+        console.log('Admin scan polling stopped');
+      }
+    }
+  );
+
   const startPolling = (token: string) => {
     setActiveScanToken(token);
     setScanData(null);
     setIsPolling(true);
-    
-    // Start polling immediately
+
+    // Set active scan token for targeted polling
+    localStorage.setItem('activeScanToken', token);
+
+    // Start targeted polling
+    startPollingScan();
+
+    // Initial poll
     pollScanStatus(token);
-    
-    // Set up interval for continuous polling (every 3 seconds)
-    pollingIntervalRef.current = setInterval(() => {
-      pollScanStatus(token);
-    }, 3000);
   };
 
   const stopPolling = () => {
     setIsPolling(false);
-    
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
+    setActiveScanToken(null);
+    localStorage.removeItem('activeScanToken');
+
+    // Stop targeted polling
+    stopPollingScan();
   };
 
   useEffect(() => {
     fetchTargets();
-    
+
+    // Sync targets with backend on admin page load
+    const syncTargets = async () => {
+      try {
+        const ipData = await getIPAddresses().catch(() => []);
+        const endpointData = await getEndpoints().catch(() => []);
+        // Import syncTargetsWithBackend dynamically to avoid circular dependency
+        const { syncTargetsWithBackend } = await import('../../utils/targetSync');
+        await syncTargetsWithBackend(ipData, endpointData);
+      } catch (error) {
+        console.log('Failed to sync targets with backend:', error);
+      }
+    };
+
+    syncTargets();
+
     // Check for active scan on page load
     const lastScanToken = localStorage.getItem('activeScanToken');
     if (lastScanToken) {
-      startPolling(lastScanToken);
+      // Verify the scan is still active before starting to poll
+      getScanStatus(lastScanToken)
+        .then(statusData => {
+          if (statusData.status === 'running') {
+            startPolling(lastScanToken);
+          } else {
+            // Clear completed/failed scan token from storage
+            localStorage.removeItem('activeScanToken');
+          }
+        })
+        .catch(() => {
+          // If we can't get the status, clear the token
+          localStorage.removeItem('activeScanToken');
+        });
     }
-    
+
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
