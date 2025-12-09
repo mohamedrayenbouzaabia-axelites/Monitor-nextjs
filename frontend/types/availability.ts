@@ -1,3 +1,30 @@
+export interface AWSInfo {
+    prefix?: string;
+    region?: string;
+    service?: string;
+    service_category?: string;
+    network_border_group?: string;
+    possible_services?: string[];
+}
+
+export interface GCPInfo {
+    prefix?: string;
+    region?: string;
+    service?: string;
+    service_category?: string;
+    scope?: string;
+    possible_services?: string[];
+}
+
+export interface Metadata {
+    location: string | null;
+    country: string | null;
+    provider: string | null;
+    service_category: string | null;
+    aws?: AWSInfo | null;
+    gcp?: GCPInfo | null;
+}
+
 export interface AccessibilityTest {
     port: number;
     service: string;
@@ -8,13 +35,11 @@ export interface TargetScanResult {
     target: string;
     ip_address: string;
     availability: boolean;
-    location: string | null;
-    country: string | null;
-    provider: string | null;
-    service_category: string | null;
+    metadata: Metadata;
     publicly_exposed: boolean;
     open_ports: number[];
     accessibility_tests: AccessibilityTest[];
+    testing_techniques: string[];
     risk_level: string;
     risk_summary: string | null;
     recommendation: string | null;

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { ScanRequest } from '../../types/availability';
 import { initiateScan, initiateAIScan } from '../../utils/api';
 import { PlayIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
@@ -9,11 +10,12 @@ interface ScanInitiatorProps {
   onScanStarted: (token: string) => void;
 }
 
-const ScanInitiator: React.FC<ScanInitiatorProps> = ({ 
-  ipAddresses, 
-  endpoints, 
-  onScanStarted 
+const ScanInitiator: React.FC<ScanInitiatorProps> = ({
+  ipAddresses,
+  endpoints,
+  onScanStarted
 }) => {
+  const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
   const [generateAISummary, setGenerateAISummary] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +37,18 @@ const ScanInitiator: React.FC<ScanInitiatorProps> = ({
       };
 
       // Choose the appropriate API endpoint based on AI summary setting
-      const response = generateAISummary 
+      const response = generateAISummary
         ? await initiateAIScan(request)
         : await initiateScan(request);
-      
+
+      // Notify parent component about the scan start
       onScanStarted(response.token);
+
+      // Redirect to monitor interface (home page) after scan starts
+      setTimeout(() => {
+        router.push('/');
+      }, 500); // Small delay to ensure the scan token is properly set
+
     } catch (error) {
       console.error('Error starting scan:', error);
       setError(error instanceof Error ? error.message : 'Failed to start scan');
@@ -114,7 +123,7 @@ const ScanInitiator: React.FC<ScanInitiatorProps> = ({
           ) : (
             <>
               <PlayIcon className="h-5 w-5 mr-2" />
-              Start Scan
+              Start Scan & Monitor
             </>
           )}
         </button>

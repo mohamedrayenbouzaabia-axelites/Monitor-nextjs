@@ -72,7 +72,7 @@ export default function Setup() {
                 Welcome to Availability Checker
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Let's set up your scanner service to get started
+                Let&apos;s set up your scanner service to get started
               </p>
             </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { TargetScanResult, ScanProgressResponse } from '../types/availability';
 import { getPublicTargetsSummary } from '../utils/api';
 import { useSilentRefresh } from '../hooks/useSilentRefresh';
-import { CheckCircleIcon, XCircleIcon, ClockIcon, GlobeAltIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, GlobeAltIcon, LinkIcon, CloudIcon, ServerIcon, ShieldCheckIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface ScanResultsProps {
   scanData: ScanProgressResponse | null;
@@ -295,6 +295,66 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
     );
   };
 
+  const getCloudProviderBadge = (metadata: any) => {
+    if (!metadata) return null;
+
+    if (metadata.aws) {
+      return (
+        <div className="flex items-center space-x-2 mt-2">
+          <div className="flex items-center space-x-1 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-md">
+            <CloudIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <span className="text-xs font-semibold text-orange-800 dark:text-orange-300">AWS</span>
+          </div>
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            {metadata.aws.service}
+          </span>
+          {metadata.aws.region && (
+            <span className="text-xs text-gray-500 dark:text-gray-500">
+              ({metadata.aws.region})
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (metadata.gcp) {
+      return (
+        <div className="flex items-center space-x-2 mt-2">
+          <div className="flex items-center space-x-1 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-md">
+            <ServerIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-xs font-semibold text-blue-800 dark:text-blue-300">GCP</span>
+          </div>
+          <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            {metadata.gcp.service}
+          </span>
+          {metadata.gcp.region && (
+            <span className="text-xs text-gray-500 dark:text-gray-500">
+              ({metadata.gcp.region})
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const getProviderIcon = (provider: string | null) => {
+    if (!provider) return null;
+
+    const lowerProvider = provider.toLowerCase();
+    if (lowerProvider.includes('amazon') || lowerProvider.includes('aws')) {
+      return <CloudIcon className="h-4 w-4 text-orange-500" />;
+    }
+    if (lowerProvider.includes('google') || lowerProvider.includes('gcp')) {
+      return <ServerIcon className="h-4 w-4 text-blue-500" />;
+    }
+    if (lowerProvider.includes('microsoft') || lowerProvider.includes('azure')) {
+      return <ShieldCheckIcon className="h-4 w-4 text-purple-500" />;
+    }
+    return <GlobeAltIcon className="h-4 w-4 text-gray-500" />;
+  };
+
   const getFlagIconClass = (country: string | null): string => {
     if (!country) return '';
 
@@ -497,6 +557,101 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
     return flagClass ? `fi fi-${flagClass}` : '';
   };
 
+  // Download functions
+  const downloadJSON = () => {
+    if (!scanData || !scanData.results) return;
+
+    const jsonData = {
+      scan_info: {
+        token: scanData.token,
+        status: scanData.status,
+        mode: scanData.mode,
+        started_at: scanData.started_at,
+        finished_at: scanData.finished_at,
+        total_targets: scanData.total_targets,
+        completed_targets: scanData.completed_targets
+      },
+      results: scanData.results.map(result => ({
+        target: result.target,
+        ip_address: result.ip_address,
+        availability: result.availability,
+        metadata: {
+          location: result.metadata.location,
+          country: result.metadata.country,
+          provider: result.metadata.provider,
+          service_category: result.metadata.service_category,
+          aws: result.metadata.aws,
+          gcp: result.metadata.gcp
+        },
+        publicly_exposed: result.publicly_exposed,
+        open_ports: result.open_ports,
+        accessibility_tests: result.accessibility_tests,
+        testing_techniques: result.testing_techniques,
+        risk_level: result.risk_level,
+        risk_summary: result.risk_summary,
+        recommendation: result.recommendation
+      }))
+    };
+
+    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `scan-results-${scanData.token}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadCSV = () => {
+    if (!scanData || !scanData.results) return;
+
+    const headers = [
+      'Target', 'IP Address', 'Available', 'Location', 'Country', 'Provider',
+      'Service Category', 'Service', 'Region', 'Publicly Exposed', 'Open Ports',
+      'Testing Techniques', 'Risk Level', 'Risk Summary', 'Recommendation'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...scanData.results.map(result => {
+        const service = result.metadata.aws?.service || result.metadata.gcp?.service || 'N/A';
+        const region = result.metadata.aws?.region || result.metadata.gcp?.region || 'N/A';
+        const testingTechniques = result.testing_techniques ? result.testing_techniques.join('; ') : 'N/A';
+        const openPorts = result.open_ports.length > 0 ? result.open_ports.join('; ') : 'N/A';
+
+        return [
+          `"${result.target}"`,
+          `"${result.ip_address}"`,
+          result.availability ? 'Yes' : 'No',
+          `"${result.metadata.location || 'N/A'}"`,
+          `"${result.metadata.country || 'N/A'}"`,
+          `"${result.metadata.provider || 'N/A'}"`,
+          `"${result.metadata.service_category || 'N/A'}"`,
+          `"${service}"`,
+          `"${region}"`,
+          result.publicly_exposed ? 'Yes' : 'No',
+          `"${openPorts}"`,
+          `"${testingTechniques}"`,
+          `"${result.risk_level}"`,
+          `"${result.risk_summary || 'N/A'}"`,
+          `"${result.recommendation || 'N/A'}"`
+        ].join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `scan-results-${scanData.token}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -541,8 +696,30 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
               </div>
             )}
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Mode: {scanData.mode === 'ai' ? 'AI Enhanced' : 'Standard'}
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Mode: {scanData.mode === 'ai' ? 'AI Enhanced' : 'Standard'}
+            </div>
+            {scanData.status === 'complete' && scanData.results && scanData.results.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={downloadJSON}
+                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 transition-colors"
+                  title="Download as JSON"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" />
+                  <span>JSON</span>
+                </button>
+                <button
+                  onClick={downloadCSV}
+                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30 transition-colors"
+                  title="Download as CSV"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" />
+                  <span>CSV</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -585,6 +762,72 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
         </div>
       </div>
 
+      {/* Cloud Provider Summary */}
+      {scanData && scanData.results && scanData.results.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Infrastructure Overview
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(() => {
+              const awsCount = scanData.results.filter(r => r.metadata?.aws).length;
+              const gcpCount = scanData.results.filter(r => r.metadata?.gcp).length;
+              const otherCount = scanData.results.length - awsCount - gcpCount;
+
+              return (
+                <>
+                  {awsCount > 0 && (
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <CloudIcon className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                        <div>
+                          <div className="text-lg font-semibold text-orange-900 dark:text-orange-100">
+                            {awsCount}
+                          </div>
+                          <div className="text-sm text-orange-700 dark:text-orange-300">
+                            AWS Services
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {gcpCount > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <ServerIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                            {gcpCount}
+                          </div>
+                          <div className="text-sm text-blue-700 dark:text-blue-300">
+                            GCP Services
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {otherCount > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <GlobeAltIcon className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+                        <div>
+                          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            {otherCount}
+                          </div>
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            Other Providers
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Show scan results if available */}
       {scanData && scanData.results && scanData.results.length > 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
@@ -610,7 +853,7 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     Location
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Provider
+                    Service Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Open Ports
@@ -619,7 +862,7 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     Risk Level
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Services
+                    Testing Techniques
                   </th>
                 </tr>
               </thead>
@@ -627,21 +870,18 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                 {scanData.results.map((result: any, index: number) => (
                   <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 mr-3">
-                          {result.target.includes('.') ? (
-                            <GlobeAltIcon className="h-5 w-5 text-blue-500" />
-                          ) : (
-                            <LinkIcon className="h-5 w-5 text-purple-500" />
-                          )}
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getProviderIcon(result.metadata?.provider)}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {result.target}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {result.ip_address}
                           </div>
+                          {getCloudProviderBadge(result.metadata)}
                         </div>
                       </div>
                     </td>
@@ -650,16 +890,31 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        {getFlagIconClass(result.country) && (
-                          <span className={getFlagIconClass(result.country)}></span>
+                        {getFlagIconClass(result.metadata?.country) && (
+                          <span className={getFlagIconClass(result.metadata?.country)}></span>
                         )}
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {result.country || 'Unknown'}
-                        </span>
+                        <div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {result.metadata?.country || 'Unknown'}
+                          </div>
+                          {result.metadata?.location && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500">
+                              {result.metadata.location}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {result.provider || 'Unknown'}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 dark:text-white font-medium">
+                        {result.metadata?.service_category || result.metadata?.provider || 'Unknown'}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {result.metadata?.provider && result.metadata?.service_category !== result.metadata?.provider
+                          ? result.metadata.provider
+                          : 'General Hosting'
+                        }
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
@@ -691,18 +946,18 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1 max-w-xs">
-                        {result.accessibility_tests && result.accessibility_tests
-                          .filter((test: any) => test.status === 'open')
-                          .slice(0, 2)
-                          .map((test: any) => (
-                            <span key={test.port} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                              {test.service}
+                        {result.testing_techniques && result.testing_techniques.length > 0 ? (
+                          result.testing_techniques.slice(0, 3).map((technique: string, idx: number) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                              {technique}
                             </span>
-                          ))}
-                        {result.accessibility_tests &&
-                         result.accessibility_tests.filter((t: any) => t.status === 'open').length > 2 && (
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500 dark:text-gray-400">None</span>
+                        )}
+                        {result.testing_techniques && result.testing_techniques.length > 3 && (
                           <span className="text-sm text-gray-500 dark:text-gray-400">
-                            +{result.accessibility_tests.filter((t: any) => t.status === 'open').length - 2} more
+                            +{result.testing_techniques.length - 3} more
                           </span>
                         )}
                       </div>

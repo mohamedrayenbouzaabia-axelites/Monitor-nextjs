@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -40,6 +40,36 @@ class ScanRequest(BaseModel):
         return self
 
 
+class AWSInfo(BaseModel):
+    """AWS-specific information for IP addresses."""
+    prefix: Optional[str] = None
+    region: Optional[str] = None
+    service: Optional[str] = None
+    service_category: Optional[str] = None
+    network_border_group: Optional[str] = None
+    possible_services: Optional[List[str]] = None
+
+
+class GCPInfo(BaseModel):
+    """GCP-specific information for IP addresses."""
+    prefix: Optional[str] = None
+    region: Optional[str] = None
+    service: Optional[str] = None
+    service_category: Optional[str] = None
+    scope: Optional[str] = None
+    possible_services: Optional[List[str]] = None
+
+
+class Metadata(BaseModel):
+    """Extended metadata for scan results, including AWS and GCP information."""
+    location: Optional[str] = None
+    country: Optional[str] = None
+    provider: Optional[str] = None
+    service_category: Optional[str] = None
+    aws: Optional[AWSInfo] = None
+    gcp: Optional[GCPInfo] = None
+
+
 class AccessibilityProbe(BaseModel):
     port: int
     service: str
@@ -50,16 +80,14 @@ class TargetScanResult(BaseModel):
     target: str
     ip_address: str
     availability: bool
-    location: Optional[str]
-    country: Optional[str]
-    provider: Optional[str]
-    service_category: Optional[str]
+    metadata: Metadata
     publicly_exposed: bool
     open_ports: List[int]
     accessibility_tests: List[AccessibilityProbe]
+    testing_techniques: List[str] = Field(default_factory=list)
     risk_level: str
     risk_summary: str
-    recommendation: Optional[str]
+    recommendation: Optional[str] = None
 
 
 class ScanProgressResponse(BaseModel):
