@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Oktoboot – AI Tools</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #050A1A;
+    color: #ffffff;
+    display: flex;
+    height: 100vh;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 230px;
+    background: #0B1224;
+    padding: 6px 0;
+    border-right: 1px solid rgba(0, 180, 255, 0.1);
+  }
+
+  .logo {
+    width: 150px;
+    display: block;
+    margin: 0 auto 25px auto;
+  }
+
+  .sidebar-section {
+    padding: 7px 20px;
+    font-size: 12px;
+    color: #7FAECC;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .sidebar-item {
+    padding: 7px 20px;
+    cursor: pointer;
+    color: #d7e8ff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-item:hover,
+  .active {
+    background: rgba(0, 195, 255, 0.15);
+  }
+
+  /* Main content */
+  .content {
+    flex: 1;
+    padding: 40px;
+    position: relative;
+  }
+
+  h2 {
+    font-size: 26px;
+    margin-bottom: 20px;
+    color: #DDE4F2;
+  }
+
+  textarea {
+    width: 100%;
+    height: 180px;
+    background: #0C1022;
+    border: 1px solid #1AA8FF;
+    border-radius: 8px;
+    padding: 12px;
+    color: #ffffff;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+  }
+
+  .btn {
+    margin-top: 20px;
+    padding: 14px 22px;
+    background: linear-gradient(90deg, #00D1FF, #008CFF);
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    color: #ffffff;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 180, 255, 0.4);
+  }
+
+  .btn:hover {
+    opacity: 0.9;
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div style="position:fixed; top:0; left:0; right:0; height:55px; background:#0B1224; border-bottom:1px solid rgba(0,180,255,0.1); display:flex; justify-content:space-between; align-items:center; padding:0 20px; z-index:20;">
+    <div style="display:flex; align-items:center; gap:18px;">
+      <img src="company-logo.png" style="width:115px;" />
+    </div>
+
+    <div style="display:flex; align-items:center; gap:18px;">
+      <span style="color:#7FAECC; font-size:14px;">Ons</span>
+      <img src="avatar.jpeg" style="width:28px; border-radius:4px;" />
+      <img src="avatar.jpeg" style="width:36px; height:36px; border-radius:50%; object-fit:cover;" />
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" style="margin-top:55px;">
+    <img src="app-logo.png" class="logo" />
+
+    <div class="sidebar-section">Main</div>
+    <div class="sidebar-item">⚡ Log Stealers Stats</div>
+    <div class="sidebar-item">🛡️ Combolist Stats</div>
+
+    <div class="sidebar-section">Leaks Search</div>
+    <div class="sidebar-item">🗄️ Leaked DB</div>
+    <div class="sidebar-item">👾 Log Stealers</div>
+    <div class="sidebar-item">📡 Combo Lists</div>
+
+    <div class="sidebar-section">Recons</div>
+    <div class="sidebar-item">🌐 Recons</div>
+
+    <div class="sidebar-section">Pentest Tools</div>
+    <div class="sidebar-item">🗂️ Domain Tools</div>
+    <div class="sidebar-item">🏢 Company Tools</div>
+    <div class="sidebar-item active">🤖 AI Tools</div>
+
+    <div class="sidebar-section">Watch List</div>
+    <div class="sidebar-item"># My Watch List</div>
+  </div>
+
+  <!-- Main content -->
+  <div class="content">
+    <h2 style="color:#E4ECF5;">AI Tools – Resource Analyzer</h2>
+
+    <label style="color:#E4ECF5; display:block; margin-bottom:12px;">Enter IP addresses or endpoints:</label>
+    <textarea placeholder="Example:
+192.168.1.1
+https://example.com/api
+10.0.45.22"></textarea>
+
+    <button class="btn">Analyze Resource</button>
+  </div>
+
+</body>
+</html>

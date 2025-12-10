@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pwn&Patch Login</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #050A1A;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .login-container {
+      background: #0C1022;
+      padding: 40px;
+      width: 360px;
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(0, 195, 255, 0.2);
+      text-align: center;
+    }
+
+    .logo {
+      width: 180px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-bottom: 25px;
+      font-weight: 600;
+      font-size: 24px;
+    }
+
+    .input-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-size: 14px;
+      margin-bottom: 6px;
+      display: block;
+      color: #DDE4F2;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #1AA8FF;
+      background: #050A1A;
+      color: #ffffff;
+      outline: none;
+      font-size: 14px;
+    }
+
+    input::placeholder {
+      color: #7FAECC;
+      font-size: 13px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(90deg, #00D1FF, #008CFF);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 180, 255, 0.4);
+    }
+
+    .login-btn:hover {
+      opacity: 0.9;
+    }
+
+    .footer-text {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #7FAECC;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <img src="logo-pwnpatch.png" alt="Pwn&Patch Logo" class="logo" />
+
+    <h2>Login</h2>
+
+    <form>
+      <div class="input-group">
+        <label>Email Address</label>
+        <input type="text" placeholder="FirstName.LastName@pwnandpatch.com" />
+      </div>
+
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" placeholder="Enter your password" />
+      </div>
+
+      <button class="login-btn">Login</button>
+          <div class="input-group" style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+        <input type="checkbox" id="remember" style="width:16px;height:16px;">
+        <label for="remember" style="margin:0;">Remember me</label>
+      </div>
+
+      
+    </form>
+
+    <hr style="margin:20px 0;border:0;border-top:1px solid #1AA8FF33;">
+
+    <a href="#" style="color:#7FAECC;font-size:14px;text-decoration:underline;">Forgot your password?</a>
+
+    <p style="margin-top:15px;color:#7FAECC;font-size:14px;">Not Registered? <a href="#" style="color:#ffffff;text-decoration:underline;">Create an account.</a></p>
+
+    <p class="footer-text" style="margin-top:25px;">Copyright © 2025 <span style="color:#1AA8FF;">Pwn & Patch.</span></p>
+
+  </div>
+
+</body>
+</html>

@@ -704,7 +704,7 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
               <div className="flex items-center space-x-2">
                 <button
                   onClick={downloadJSON}
-                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30 transition-colors"
+                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium company-blue bg-cyan-50 border border-cyan-200 rounded-md hover:bg-cyan-100 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-500/50 dark:hover:bg-cyan-500/30 transition-colors"
                   title="Download as JSON"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4" />
@@ -712,7 +712,7 @@ const ScanResults: React.FC<ScanResultsProps> = ({ scanData, isLoading = false }
                 </button>
                 <button
                   onClick={downloadCSV}
-                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30 transition-colors"
+                  className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium company-blue bg-cyan-50 border border-cyan-200 rounded-md hover:bg-cyan-100 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-500/50 dark:hover:bg-cyan-500/30 transition-colors"
                   title="Download as CSV"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4" />

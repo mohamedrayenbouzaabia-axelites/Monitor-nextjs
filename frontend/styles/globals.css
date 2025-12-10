@@ -2,15 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optimize background gradient */
+/* Optimize background gradient - Company Branding */
 body {
-  @apply bg-gray-50 dark:bg-gray-900;
+  @apply bg-gray-50;
   min-height: 100vh;
   position: relative;
 }
 
 body.dark {
-  @apply bg-gray-900;
+  background: #050A1A;
+}
+
+/* Company color scheme for dark mode */
+.dark body {
+  background: #050A1A;
+  color: #ffffff;
+}
+
+.dark .bg-white {
+  background-color: #0B1224 !important;
+}
+
+.dark .bg-gray-800 {
+  background-color: #0B1224 !important;
+}
+
+.dark .bg-gray-900 {
+  background-color: #050A1A !important;
+}
+
+.dark .text-gray-900 {
+  color: #E4ECF5 !important;
+}
+
+.dark .text-gray-800 {
+  color: #DDE4F2 !important;
+}
+
+.dark .text-gray-700 {
+  color: #D7E8FF !important;
+}
+
+.dark .text-gray-600 {
+  color: #7FAECC !important;
+}
+
+.dark .text-gray-500 {
+  color: #7FAECC !important;
+}
+
+.dark .text-gray-400 {
+  color: #7FAECC !important;
+}
+
+.dark .border-gray-200 {
+  border-color: rgba(0, 180, 255, 0.1) !important;
+}
+
+.dark .border-gray-300 {
+  border-color: rgba(0, 180, 255, 0.1) !important;
+}
+
+.dark .border-gray-700 {
+  border-color: rgba(0, 180, 255, 0.1) !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: rgba(0, 195, 255, 0.15) !important;
+}
+
+.dark .hover\:bg-gray-800:hover {
+  background-color: rgba(0, 195, 255, 0.15) !important;
+}
+
+/* Company accent colors */
+.company-blue {
+  color: #1AA8FF;
+}
+
+.company-bg-blue {
+  background: linear-gradient(90deg, #00D1FF, #008CFF);
+}
+
+.company-border-blue {
+  border-color: #1AA8FF;
 }
 
 @layer components {
@@ -91,9 +166,9 @@ body.dark {
   }
 
   .metric-value {
-    @apply text-3xl font-bold bg-clip-text text-transparent 
+    @apply text-3xl font-bold bg-clip-text text-transparent
     bg-gradient-to-r from-blue-600 to-blue-400
-    dark:from-blue-400 dark:to-blue-300;
+    dark:from-cyan-400 dark:to-blue-300;
   }
 
   .metric-label {
@@ -179,6 +254,62 @@ body {
 
 .dashboard-container {
   @apply min-h-screen;
+}
+
+/* Company Sidebar Styles - Matching input.html */
+.sidebar {
+  background: #0B1224;
+  padding: 6px 0;
+}
+
+.logo {
+  width: 150px;
+  display: block;
+  margin: 0 auto 25px auto;
+}
+
+.sidebar-section {
+  padding: 7px 20px;
+  font-size: 12px;
+  color: #7FAECC;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.sidebar-item {
+  padding: 7px 20px;
+  cursor: pointer;
+  color: #d7e8ff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover,
+.sidebar-item.active {
+  background: rgba(0, 195, 255, 0.15);
+}
+
+.sidebar-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Mobile Sidebar Toggle */
+.sidebar-mobile-overlay {
+  @apply fixed inset-0 bg-black/50 z-30 lg:hidden;
+}
+
+.sidebar-mobile-open {
+  @apply translate-x-0;
+}
+
+.sidebar-mobile-closed {
+  @apply -translate-x-full;
 }
 
 /* Keep other necessary styles */
